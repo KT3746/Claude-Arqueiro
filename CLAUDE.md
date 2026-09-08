@@ -104,8 +104,13 @@ Bugs já corrigidos (no repositório anterior): ângulo da flecha cravada,
 arrasto perdido ao segurar o clique entre estados, botão errado na vitória do
 último nível, e o toque que não respondia em nenhum botão.
 
-**Pendência aberta:** este repositório é novo — o GitHub Pages ainda não foi
-habilitado (`Settings → Pages → Build and deployment → Source → GitHub
-Actions`). Até isso ser feito manualmente pelo usuário, `pages.yml` roda e
-sai em sucesso sem publicar nada (deixa um `::notice`). Depois de habilitado,
-confirme o deploy pela API antes de passar o link para o usuário.
+**GitHub Pages habilitado em 2026-09-08.** O usuário habilitou manualmente
+(`Settings → Pages → Build and deployment → Source → GitHub Actions`) e o
+workflow `pages.yml` já publicou com sucesso — jogo em
+`https://kt3746.github.io/Claude-Arqueiro/`. Confirmado pelo log do job
+"Publicar" (run 34198118365): passou pelo `actions/deploy-pages@v4` de
+verdade, com "Reported success!" e `environment_url` batendo com esse
+endereço — não é mais o caso de saída antecipada por Pages desabilitado.
+Não há pendência aberta no momento; a próxima sessão deve tratar isto como
+"jogo publicado e funcionando" e só reabrir a suspeita de link antigo/cache
+se o usuário disser que o jogo não responde.
