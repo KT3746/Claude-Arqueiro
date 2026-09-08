@@ -19,7 +19,7 @@ export const LEVELS = [
   {
     id: 'l1',
     name: 'Primeiro tiro',
-    hint: 'Puxe a corda para trás e solte. A linha pontilhada mostra o caminho da flecha.',
+    hint: 'Arraste para trás em qualquer ponto da tela e solte. A linha pontilhada mostra o caminho da flecha.',
     distance: 18,
     height: 1.3,
     arrows: 6,

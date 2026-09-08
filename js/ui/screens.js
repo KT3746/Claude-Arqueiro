@@ -74,7 +74,9 @@ export function createScreens(root, actions) {
       box.append(settingsRow);
 
       box.append(el('p', 'hint-text',
-        'Mouse ou dedo: arraste para trás do arco e solte. ' +
+        'Dedo ou mouse: toque em qualquer lugar da tela e arraste para trás — ' +
+        'quanto mais longe puxar, mais força. Solte para atirar; ' +
+        'volte ao ponto de partida e solte para desistir do tiro. ' +
         'Teclado: ← → mira, ↑ ↓ força, Espaço dispara, P pausa, R reinicia.'));
     },
 

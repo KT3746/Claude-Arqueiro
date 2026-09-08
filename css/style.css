@@ -64,6 +64,50 @@ html, body {
 #pause-button:hover { background: rgba(14, 24, 38, 0.8); }
 #pause-button[hidden] { display: none; }
 
+/* ------------------------------------------------- ajuste fino da mira */
+
+#aim-pad {
+  position: absolute;
+  right: 12px;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px) + 14px);
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+#aim-pad[hidden] { display: none; }
+
+.aim-group {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.aim-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+#aim-pad button {
+  width: 46px;
+  height: 42px;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(14, 24, 38, 0.55);
+  color: var(--ink);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  /* Sem atraso de 300 ms nem seleção de texto ao tocar repetidamente. */
+  touch-action: manipulation;
+  user-select: none;
+}
+
+#aim-pad button:active { background: rgba(70, 110, 160, 0.75); }
+
 /* ------------------------------------------------------------------ telas */
 
 #ui {

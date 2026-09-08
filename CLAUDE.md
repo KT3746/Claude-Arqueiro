@@ -79,6 +79,27 @@ Decisões que não são óbvias:
 - Em `input.js`, `onUp` só chama `preventDefault()` quando encerra um arrasto
   **nosso** (`pointer.down` era true). Cancelar um `touchend` qualquer suprime o
   `click` sintético do navegador e mata todos os botões da interface no celular.
+- **O arrasto ancora onde o dedo tocou** (`bow.dragOrigin`), não na posição do
+  arco. Ancorar no arco obrigava a tocar atrás do arqueiro — no celular quase
+  não há espaço ali, e a mão tapava o que precisava ser visto.
+- A âncora vem de `input.pointer.start` (onde o toque começou), não da posição
+  atual: quem começa a puxar enquanto a flecha anterior ainda voa perderia o
+  caminho já percorrido, e o puxão sairia mais fraco que o gesto.
+- A distância de força máxima acompanha a tela (`fullDrawPx`, 34% do menor
+  lado, entre 92 e 190 px). Fixo em 190 px, um celular em pé não alcançava a
+  força total. Puxar **além** do anel não aumenta a força, mas afina o ângulo
+  (1 px de dedo vale menos grau quanto mais longe) — é o modo de mira fina.
+- Soltar sem ter passado da folga de 12 px **não dispara**: é como desistir do
+  tiro sem gastar flecha.
+- A janela de acerto é estreita por física: a 30 m, meio grau já joga a flecha
+  para fora do alvo (é o arrasto forte que faz a altura mudar ~0,5 m por grau).
+  Daí os botões de ajuste fino (`#aim-pad`, meio grau e 2% por toque) e a
+  leitura de ângulo/força junto ao arco — sem eles, não dá para repetir um
+  tiro que deu certo.
+- Elementos do DOM ficam por cima do canvas: `drawHint` reserva a coluna da
+  luneta à esquerda (`SCOPE_SPACE`) e a do botão de pausa à direita
+  (`PAUSE_SPACE`), e quebra o texto em linhas — sem isso as dicas longas saíam
+  cortadas dos dois lados no celular em pé.
 
 ## Fluxo de trabalho
 
@@ -100,12 +121,25 @@ móveis, obstáculos, balões de bônus, luneta, som sintetizado. Código e
 histórico de decisões trazidos do repositório `Claude` sem alterações de
 lógica — só a extração para este repositório dedicado.
 
+Em 2026-09-08 o controle de mira foi refeito, depois de o usuário dizer que
+"tá difícil de puxar a flecha e mirar" no celular: arrasto ancorado no dedo
+(em qualquer ponto da tela), distância de força máxima proporcional à tela,
+guia do puxão desenhada sob o dedo, cancelamento do tiro, botões de ajuste
+fino e leitura de ângulo/força. Verificado com toque real (Pixel 5, CDP):
+força total alcançável, cancelamento sem gastar flecha, botões de interface
+ainda respondendo e alvo acertado usando só os botões de ajuste.
+
 Bugs já corrigidos (no repositório anterior): ângulo da flecha cravada,
 arrasto perdido ao segurar o clique entre estados, botão errado na vitória do
 último nível, e o toque que não respondia em nenhum botão.
 
-**Pendência aberta:** este repositório é novo — o GitHub Pages ainda não foi
-habilitado (`Settings → Pages → Build and deployment → Source → GitHub
-Actions`). Até isso ser feito manualmente pelo usuário, `pages.yml` roda e
-sai em sucesso sem publicar nada (deixa um `::notice`). Depois de habilitado,
-confirme o deploy pela API antes de passar o link para o usuário.
+**GitHub Pages habilitado em 2026-09-08.** O usuário habilitou manualmente
+(`Settings → Pages → Build and deployment → Source → GitHub Actions`) e o
+workflow `pages.yml` já publicou com sucesso — jogo em
+`https://kt3746.github.io/Claude-Arqueiro/`. Confirmado pelo log do job
+"Publicar" (run 34198118365): passou pelo `actions/deploy-pages@v4` de
+verdade, com "Reported success!" e `environment_url` batendo com esse
+endereço — não é mais o caso de saída antecipada por Pages desabilitado.
+Não há pendência aberta no momento; a próxima sessão deve tratar isto como
+"jogo publicado e funcionando" e só reabrir a suspeita de link antigo/cache
+se o usuário disser que o jogo não responde.

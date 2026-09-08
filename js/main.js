@@ -20,6 +20,7 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d', { alpha: false });
 const ui = document.getElementById('ui');
 const pauseButton = document.getElementById('pause-button');
+const aimPad = document.getElementById('aim-pad');
 
 const camera = createCamera();
 const particles = createParticles();
@@ -51,6 +52,12 @@ const screens = createScreens(ui, {
   toMenu: () => toMenu(),
   setMotion,
 });
+
+/** Botões que só fazem sentido com um nível em andamento. */
+function showPlayChrome(visible) {
+  pauseButton.hidden = !visible;
+  aimPad.hidden = !visible;
+}
 
 function setMotion(enabled) {
   state.motion = enabled;
@@ -95,7 +102,7 @@ function startLevel(index) {
   particles.clear();
   state.mode = 'playing';
   screens.hide();
-  pauseButton.hidden = false;
+  showPlayChrome(true);
 }
 
 function startPractice() {
@@ -104,20 +111,20 @@ function startPractice() {
   particles.clear();
   state.mode = 'playing';
   screens.hide();
-  pauseButton.hidden = false;
+  showPlayChrome(true);
 }
 
 function pause() {
   if (state.mode !== 'playing') return;
   state.mode = 'paused';
-  pauseButton.hidden = true;
+  showPlayChrome(false);
   screens.pause();
 }
 
 function resume() {
   if (state.mode !== 'paused') return;
   state.mode = 'playing';
-  pauseButton.hidden = false;
+  showPlayChrome(true);
   screens.hide();
 }
 
@@ -125,14 +132,14 @@ function toMenu() {
   state.mode = 'menu';
   state.level = null;
   particles.clear();
-  pauseButton.hidden = true;
+  showPlayChrome(false);
   screens.menu();
 }
 
 function finishLevel() {
   const level = state.level;
   state.mode = 'result';
-  pauseButton.hidden = true;
+  showPlayChrome(false);
 
   if (state.practice) {
     toMenu();
@@ -157,6 +164,31 @@ function finishLevel() {
 pauseButton.addEventListener('click', () => {
   sfx.click();
   pause();
+});
+
+/**
+ * Ajuste fino da mira, para o celular.
+ *
+ * O puxão dá a mira grossa; um alvo a 30 m tem janela de acerto de cerca de
+ * dois graus, e nenhum dedo é firme o bastante para isso num arrasto. Meio
+ * grau por toque é o passo que cabe dentro dessa janela.
+ *
+ * Escuta `click` (e não `touchstart`) de propósito: os botões são elementos
+ * do DOM, e o `click` sintético do navegador é justamente o que a guarda do
+ * `input.js` preserva no toque.
+ */
+const AIM_STEP = (0.5 * Math.PI) / 180;
+const POWER_STEP = 0.02;
+
+aimPad.addEventListener('click', (event) => {
+  const acao = event.target.closest('button')?.dataset.aim;
+  if (!acao || state.mode !== 'playing' || !state.level) return;
+  const bow = state.level.bow;
+  if (acao === 'angle-up') bow.adjust({ angle: AIM_STEP });
+  if (acao === 'angle-down') bow.adjust({ angle: -AIM_STEP });
+  if (acao === 'power-up') bow.adjust({ power: POWER_STEP });
+  if (acao === 'power-down') bow.adjust({ power: -POWER_STEP });
+  sfx.click();
 });
 
 // --------------------------------------------------------------- entrada
@@ -198,13 +230,16 @@ function handleDiscreteInput() {
     // já aconteceu e nunca dispararia `justPressed` de novo — sem isso, o
     // arco simplesmente não responde até soltar e clicar outra vez.
     if (!level.bow.dragging && input.pointer.down) {
-      level.bow.beginDrag();
+      level.bow.beginDrag(input.pointer.start, camera);
       level.bow.updateDrag(input.pointer, camera);
       sfx.draw(level.bow.power);
     }
     if (input.pointer.justReleased && level.bow.dragging) {
+      // Soltar sem ter puxado (um toque solto na tela, ou o dedo de volta ao
+      // ponto de partida) não gasta flecha: é o jeito de desistir do tiro.
+      const armado = level.bow.pulled;
       level.bow.endDrag();
-      level.fire();
+      if (armado) level.fire();
     }
     if (input.wasPressed('Space')) level.fire();
   } else if (input.pointer.justReleased) {

@@ -20,6 +20,24 @@
       </svg>
     </button>
 
+    <!--
+      Ajuste fino da mira. No celular o puxão dá a mira grossa; a janela de
+      acerto de um alvo longe é de poucos graus, e esses botões são o jeito de
+      chegar lá sem depender da firmeza do dedo.
+    -->
+    <div id="aim-pad" hidden>
+      <div class="aim-group">
+        <span class="aim-label">mira</span>
+        <button type="button" data-aim="angle-up" aria-label="Subir a mira meio grau">▲</button>
+        <button type="button" data-aim="angle-down" aria-label="Baixar a mira meio grau">▼</button>
+      </div>
+      <div class="aim-group">
+        <span class="aim-label">força</span>
+        <button type="button" data-aim="power-up" aria-label="Aumentar a força">+</button>
+        <button type="button" data-aim="power-down" aria-label="Diminuir a força">−</button>
+      </div>
+    </div>
+
     <div id="ui" hidden></div>
 
     <noscript>

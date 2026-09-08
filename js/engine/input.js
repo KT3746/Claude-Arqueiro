@@ -4,7 +4,14 @@
  */
 
 export function createInput(canvas) {
-  const pointer = { x: 0, y: 0, down: false, justPressed: false, justReleased: false };
+  // `start` guarda onde o toque/clique COMEÇOU. O arco ancora o arrasto ali,
+  // e não na posição em que o dedo estava quando o jogo voltou a aceitar mira:
+  // sem isso, quem começa a puxar enquanto a flecha anterior ainda voa perde o
+  // caminho já percorrido e o puxão sai mais fraco do que o gesto foi.
+  const pointer = {
+    x: 0, y: 0, down: false, justPressed: false, justReleased: false,
+    start: { x: 0, y: 0 },
+  };
   const keys = new Set();
   const pressedThisFrame = new Set();
 
@@ -17,7 +24,11 @@ export function createInput(canvas) {
 
   function onDown(event) {
     positionFrom(event);
-    if (!pointer.down) pointer.justPressed = true;
+    if (!pointer.down) {
+      pointer.justPressed = true;
+      pointer.start.x = pointer.x;
+      pointer.start.y = pointer.y;
+    }
     pointer.down = true;
     if (event.cancelable) event.preventDefault();
   }
