@@ -310,7 +310,10 @@ export function createLevel(spec, { camera, particles, motionEnabled = true }) {
 
       particles.draw(ctx, camera);
       this.drawFloaters(ctx);
-      if (this.canAim) this.drawAimHint(ctx);
+      if (this.canAim) {
+        this.drawAimHint(ctx);
+        this.bow.drawDragGuide(ctx);
+      }
     },
 
     /** Trajetória prevista, pontilhada e desbotando com a distância. */
@@ -329,11 +332,35 @@ export function createLevel(spec, { camera, particles, motionEnabled = true }) {
       ctx.restore();
     },
 
-    /** Barra de força junto ao arco enquanto se puxa a corda. */
+    /**
+     * Barra de força junto ao arco e a leitura de ângulo/força.
+     *
+     * Os números ficam visíveis mesmo sem estar puxando: são eles que dão
+     * retorno aos botões de ajuste fino e permitem repetir um tiro que deu
+     * certo ("acertei com 12° e 80%") em vez de chutar de novo.
+     */
     drawAimHint(ctx) {
-      if (!this.bow.dragging) return;
       const anchor = camera.toScreen(this.bow.x, this.bow.y);
       const radius = 46;
+
+      ctx.save();
+      ctx.font = '600 13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const leitura = `${(this.bow.angle * 57.2958).toFixed(1)}°  ·  ${Math.round(this.bow.power * 100)}%`;
+      // O arqueiro fica encostado na borda esquerda: centrar o texto nele
+      // jogaria metade dos números para fora da tela.
+      const meia = ctx.measureText(leitura).width / 2 + 8;
+      const lx = Math.min(Math.max(anchor.x, meia), camera.width - meia);
+      const ly = anchor.y + radius + 16;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.strokeText(leitura, lx, ly);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillText(leitura, lx, ly);
+      ctx.restore();
+
+      if (!this.bow.dragging) return;
       ctx.save();
       ctx.lineWidth = 6;
       ctx.strokeStyle = 'rgba(0,0,0,0.35)';

@@ -194,26 +194,68 @@ export function drawOffscreenTarget(ctx, level, camera) {
   ctx.restore();
 }
 
-/** Dica do nível, some depois do primeiro tiro. */
+/**
+ * Dica do nível, some depois do primeiro tiro.
+ *
+ * Duas correções de celular em pé: a dica quebra em linhas (as mais longas
+ * passavam de ponta a ponta e saíam cortadas dos dois lados) e mora no alto,
+ * à direita da luneta. Embaixo ela cobria justamente o arqueiro e os botões
+ * de ajuste fino — o que o jogador precisa ver enquanto aprende a puxar.
+ */
 export function drawHint(ctx, level, { width, height }) {
   if (!level.spec.hint || level.shots.length > 0) return;
   ctx.save();
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   ctx.font = '500 15px system-ui, sans-serif';
-  const text = level.spec.hint;
-  const metrics = ctx.measureText(text);
-  const boxWidth = Math.min(width - 32, metrics.width + 36);
-  const x = width / 2;
-  const y = height - 54;
 
-  ctx.fillStyle = 'rgba(12, 20, 30, 0.55)';
-  roundRect(ctx, x - boxWidth / 2, y - 20, boxWidth, 40, 12);
+  // Faixa livre: começa depois da luneta (canto superior esquerdo) e vai até
+  // a margem direita, abaixo da faixa de pontos.
+  const left = SCOPE_SPACE;
+  const right = width - PAUSE_SPACE;
+  const maxTextWidth = Math.max(120, right - left - 36);
+  const lines = wrapText(ctx, level.spec.hint, maxTextWidth);
+  const lineHeight = 20;
+  const boxHeight = lines.length * lineHeight + 18;
+  let widest = 0;
+  for (const line of lines) widest = Math.max(widest, ctx.measureText(line).width);
+  const boxWidth = Math.min(right - left, widest + 36);
+  const x = (left + right) / 2;
+  const top = 64;
+
+  ctx.fillStyle = 'rgba(12, 20, 30, 0.62)';
+  roundRect(ctx, x - boxWidth / 2, top, boxWidth, boxHeight, 12);
   ctx.fill();
 
   ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, x, y);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x, top + 9 + lineHeight * (i + 0.5));
+  });
   ctx.restore();
+}
+
+/** Largura reservada à esquerda para a luneta. */
+const SCOPE_SPACE = 124;
+
+/** Largura reservada à direita para o botão de pausa, que é do DOM e fica por cima. */
+const PAUSE_SPACE = 68;
+
+/** Quebra o texto em linhas que cabem em `maxWidth`. */
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const tentativa = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(tentativa).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = tentativa;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 function roundRect(ctx, x, y, w, h, r) {

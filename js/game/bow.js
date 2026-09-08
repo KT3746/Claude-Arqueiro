@@ -2,7 +2,7 @@
  * O arqueiro e o arco: mira, força e o desenho de tudo isso.
  *
  * Existem dois jeitos de mirar, e os dois mexem no mesmo estado:
- *  - arrastar (mouse/dedo) para trás do arco, como um estilingue;
+ *  - arrastar (mouse/dedo) em qualquer ponto da tela, como um estilingue;
  *  - teclado (setas), para quem prefere precisão ou não usa apontador.
  */
 
@@ -19,8 +19,31 @@ export const MAX_SPEED = 46;
 export const MIN_ANGLE = -0.35;
 export const MAX_ANGLE = 1.25;
 
-/** Distância de arrasto, em pixels, que corresponde à força máxima. */
-const FULL_DRAW_PX = 190;
+/**
+ * Distância de arrasto que corresponde à força máxima, em pixels de CSS.
+ *
+ * Era um valor fixo de 190 px medidos a partir do arco. Num celular isso
+ * quase nunca cabia: a tela é estreita, o arco fica na esquerda, e o jogador
+ * precisava puxar para fora da tela para chegar na força total. Agora a
+ * distância acompanha o tamanho da tela — telas pequenas pedem um puxão
+ * proporcionalmente menor — e o teto continua sendo 190 px no computador.
+ */
+const MAX_FULL_DRAW_PX = 190;
+const MIN_FULL_DRAW_PX = 92;
+
+/**
+ * Folga inicial: os primeiros pixels do arrasto não valem força nem mudam a
+ * mira. Sem ela, encostar o dedo já bagunçaria o ângulo (perto da âncora,
+ * um tremidinho de 2 px gira a mira inteira), e não haveria como desistir do
+ * tiro. Voltar o dedo para dentro dessa folga e soltar cancela o disparo.
+ */
+const DEAD_ZONE_PX = 12;
+
+function fullDrawPx(camera) {
+  if (!camera) return MAX_FULL_DRAW_PX;
+  const menorLado = Math.min(camera.width, camera.height);
+  return clamp(menorLado * 0.34, MIN_FULL_DRAW_PX, MAX_FULL_DRAW_PX);
+}
 
 export function createBow({ x = 0, y = 1.62 } = {}) {
   return {
@@ -29,6 +52,14 @@ export function createBow({ x = 0, y = 1.62 } = {}) {
     angle: 0.1,
     power: 0.5,
     dragging: false,
+    /** Ponto da tela onde o arrasto começou — a âncora do "estilingue". */
+    dragOrigin: null,
+    /** Onde o dedo/mouse está agora, para desenhar a linha do puxão. */
+    dragPointer: null,
+    /** Distância de puxão que vale força máxima neste tamanho de tela. */
+    dragFull: MAX_FULL_DRAW_PX,
+    /** O arrasto já passou da folga inicial? Só então o tiro sai. */
+    pulled: false,
     /** Tempo desde o disparo, usado para a animação de recuo do arco. */
     recoil: 0,
 
@@ -45,8 +76,21 @@ export function createBow({ x = 0, y = 1.62 } = {}) {
       };
     },
 
-    beginDrag() {
+    /**
+     * Começa o arrasto ancorado ONDE O DEDO TOCOU, não no arco.
+     *
+     * Antes a âncora era a posição do arco na tela: para armar o arco era
+     * preciso tocar longe dele, atrás do arqueiro — justamente o canto onde
+     * um celular não tem espaço, e onde a mão tapa o que se precisa ver.
+     * Ancorando no toque, o jogador puxa a partir de qualquer lugar (de
+     * preferência num canto vazio) e enxerga o arco e o alvo o tempo todo.
+     */
+    beginDrag(pointerScreen, camera) {
       this.dragging = true;
+      this.pulled = false;
+      this.dragFull = fullDrawPx(camera);
+      this.dragOrigin = pointerScreen ? { x: pointerScreen.x, y: pointerScreen.y } : null;
+      this.dragPointer = this.dragOrigin ? { ...this.dragOrigin } : null;
     },
 
     /**
@@ -54,19 +98,29 @@ export function createBow({ x = 0, y = 1.62 } = {}) {
      * Puxar para trás/baixo do arco mira para frente/cima — como um arco de verdade.
      */
     updateDrag(pointerScreen, camera) {
-      const anchor = camera.toScreen(this.x, this.y);
+      const anchor = this.dragOrigin ?? camera.toScreen(this.x, this.y);
+      this.dragPointer = { x: pointerScreen.x, y: pointerScreen.y };
       const dx = anchor.x - pointerScreen.x;
       const dy = anchor.y - pointerScreen.y;
       const distance = Math.hypot(dx, dy);
 
-      if (distance < 12) return; // muito perto do arco: mantém a mira anterior
+      if (distance < DEAD_ZONE_PX) {
+        // Ainda dentro da folga: mantém a mira anterior e desarma o tiro.
+        this.pulled = false;
+        return;
+      }
 
+      const curso = Math.max(1, this.dragFull - DEAD_ZONE_PX);
       this.angle = clamp(Math.atan2(-dy, dx), MIN_ANGLE, MAX_ANGLE);
-      this.power = clamp(distance / FULL_DRAW_PX, 0.05, 1);
+      this.power = clamp((distance - DEAD_ZONE_PX) / curso, 0.05, 1);
+      this.pulled = true;
     },
 
     endDrag() {
       this.dragging = false;
+      this.dragOrigin = null;
+      this.dragPointer = null;
+      this.pulled = false;
     },
 
     /** Ajuste fino pelo teclado. */
@@ -108,7 +162,76 @@ export function createBow({ x = 0, y = 1.62 } = {}) {
       drawArcher(ctx, camera, this);
       if (showString) drawBow(ctx, camera, this);
     },
+
+    /**
+     * Desenha o "estilingue" sob o dedo: a âncora do arrasto, o anel da força
+     * máxima e a linha do puxão. Como a âncora agora é um ponto qualquer da
+     * tela, ela é invisível por natureza — sem esse desenho o jogador não
+     * teria como saber de onde está puxando nem o quanto falta para a força
+     * total.
+     */
+    drawDragGuide(ctx) {
+      if (!this.dragging || !this.dragOrigin || !this.dragPointer) return;
+      const o = this.dragOrigin;
+      const p = this.dragPointer;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+
+      // Anel da força máxima: puxar até ele já é o puxão mais forte possível.
+      // Bem apagado de propósito — a linha pontilhada da trajetória é branca
+      // também, e um anel forte demais se confundia com ela.
+      ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 8]);
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, this.dragFull, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Linha do puxão, do ponto de origem até o dedo.
+      ctx.strokeStyle = this.pulled ? dragColor(this.power) : 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+
+      // Âncora: cheia enquanto o tiro está armado, vazada quando voltar para
+      // a folga (aviso visual de que soltar ali NÃO dispara).
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, 7, 0, Math.PI * 2);
+      if (this.pulled) {
+        ctx.fillStyle = dragColor(this.power);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Seta curta na origem mostrando para onde a flecha vai sair.
+      if (this.pulled) {
+        const len = 26;
+        const ax = o.x + Math.cos(this.angle) * len;
+        const ay = o.y - Math.sin(this.angle) * len;
+        ctx.strokeStyle = dragColor(this.power);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y);
+        ctx.lineTo(ax, ay);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    },
   };
+}
+
+function dragColor(power) {
+  if (power > 0.85) return '#e2453c';
+  if (power > 0.55) return '#f5d23b';
+  return '#7ee081';
 }
 
 function clamp(value, min, max) {
