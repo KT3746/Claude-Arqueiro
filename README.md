@@ -4,11 +4,6 @@ Jogo de arco e flecha em HTML5 Canvas: mire, leia o vento, acerte o X.
 Roda direto no navegador, no computador e no celular. **Sem build, sem
 dependências, sem instalar nada.**
 
-Este repositório também hospeda **[Linha de Frente](linha-de-frente/)**,
-artilharia militar por turnos contra uma IA, com terreno destrutível de
-verdade — veja `linha-de-frente/README.md` (ou o link "Linha de Frente" no
-menu do Arqueiro). Os dois jogos compartilham o motor em `js/engine/`.
-
 ## Como jogar
 
 Abra `index.html` num navegador — ou sirva a pasta, que é o jeito recomendado
