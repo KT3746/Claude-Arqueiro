@@ -78,12 +78,6 @@ export function createScreens(root, actions) {
         'quanto mais longe puxar, mais força. Solte para atirar; ' +
         'volte ao ponto de partida e solte para desistir do tiro. ' +
         'Teclado: ← → mira, ↑ ↓ força, Espaço dispara, P pausa, R reinicia.'));
-
-      const outroJogo = el('div', 'actions secondary-actions');
-      const link = el('a', 'btn', 'Linha de Frente →');
-      link.href = 'linha-de-frente/';
-      outroJogo.append(link);
-      box.append(outroJogo);
     },
 
     levelSelect() {

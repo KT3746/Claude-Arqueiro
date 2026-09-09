@@ -1,16 +1,7 @@
 # Arqueiro — contexto do projeto
 
-Dois jogos em HTML5 Canvas, em português, compartilhando o motor em
-`js/engine/`. Estático: **sem build, sem dependências, sem `npm install`**.
-Publicado no GitHub Pages via GitHub Actions.
-
-- **Arqueiro** (raiz, `/`) — arco e flecha, 12 níveis. O jogo original deste
-  repositório; a seção "Arquitetura" abaixo é sobre ele.
-- **Linha de Frente** (`/linha-de-frente/`) — artilharia militar por turnos
-  contra uma IA, terreno destrutível de verdade. Ver a seção própria mais
-  abaixo, e `linha-de-frente/README.md` para detalhes de jogo.
-
-Os dois têm um link um para o outro no respectivo menu principal.
+Jogo de arco e flecha em HTML5 Canvas, em português. Estático: **sem build, sem
+dependências, sem `npm install`**. Publicado no GitHub Pages via GitHub Actions.
 
 **Atenção: o usuário renomeia e transfere o repositório com frequência.** O
 jogo já viveu em `desktop-tutorial`, depois `Arco-e-Flecha`, depois `Claude`
@@ -34,13 +25,13 @@ repositório), que nenhuma ferramenta alcança.
 ## Como rodar e testar
 
 ```bash
-python3 -m http.server 8000   # abre em http://localhost:8000, ou /linha-de-frente/
-node --test                   # 132 testes, runner nativo do Node, sem instalar nada
+python3 -m http.server 8000   # abre em http://localhost:8000
+node --test                   # 22 testes, runner nativo do Node, sem instalar nada
 ```
 
-Os módulos de física/pontuação (Arqueiro) e terreno/balística/turnos/IA
-(Linha de Frente) são funções puras sem DOM — por isso dá para testá-los no
-runner nativo. O resto se testa dirigindo o jogo num navegador real.
+`js/game/physics.js` e `js/game/scoring.js` são funções puras sem DOM — por isso
+dá para testá-las no runner nativo. O resto se testa dirigindo o jogo num
+navegador real.
 
 **Chromium para testes de navegador**: já instalado em
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Instale o Playwright no
@@ -110,97 +101,6 @@ Decisões que não são óbvias:
   (`PAUSE_SPACE`), e quebra o texto em linhas — sem isso as dicas longas saíam
   cortadas dos dois lados no celular em pé.
 
-## Linha de Frente — arquitetura
-
-Port sério e reduzido do jogo **Minhocas**, que ficou no repositório `Claude`
-(`js/minhocas/`, `docs/PLANO-TRINCHEIRA.md`) quando o Arqueiro foi extraído.
-Trazido para cá em 2026-09-08, a pedido do usuário ("gostei desse tipo de
-jogo... tipo canhão, com 2 adversários, sendo um IA... mais sério, com armas
-militares").
-
-```
-linha-de-frente/index.html    página, canvas e a barra de controles de toque
-linha-de-frente/css/style.css controles de toque + o que o Arqueiro não tem (seletor, campo, tabela, placar)
-js/frente/mask.js             máscara do terreno (1 byte/pixel)          [PURO, testado]
-js/frente/terrain-gen.js      geração do mapa por semente                [PURO, testado]
-js/frente/terrain.js          mundo em metros + render em blocos sujos
-js/frente/ballistics.js       integração e colisão varrida               [PURO, testado]
-js/frente/damage.js           curva de dano e empurrão                   [PURO, testado]
-js/frente/turn.js             máquina de turnos                          [PURO, testado]
-js/frente/weapons.js          a tabela de armas (9, ver README do jogo)  [dados, testado]
-js/frente/soldado.js          movimento (andar/pular/queda) + desenho    [movimento testado]
-js/frente/ai.js               decisão de tiro da IA                      [PURO, testado]
-js/frente/projectile.js       execução dos tipos de arma
-js/frente/match.js            junta tudo: mundo, equipes, turnos, IA
-js/frente/ui/                 HUD no canvas, telas no DOM
-```
-
-O que veio **verbatim** do Minhocas (mesma lógica, sem alteração): mask.js,
-terrain-gen.js, terrain.js, ballistics.js, damage.js, turn.js,
-`js/engine/{rng,chunks}.js` (novos no motor compartilhado). `soldado.js` é
-`worm.js` com o desenho trocado (farda + capacete militar em vez de olhos e
-capacete arredondado); as funções de movimento/colisão são idênticas e
-continuam cobertas por `tests/soldado-move.test.js` (port de
-`worm-move.test.js`).
-
-O que foi **cortado** do arsenal original (14 armas → 9) por não ser sério o
-bastante para um confronto militar: ovelha, escopeta, corda ninja, jetpack,
-teleporte. Cortar os quatro últimos também tirou de `match.js` toda a lógica
-de utilitário (~150 linhas) — nenhuma perda funcional, só simplificação.
-
-O que é **novo**, sem equivalente no Minhocas:
-
-- **`js/frente/ai.js`** — a IA não existia no jogo original (ele só tinha
-  "2 jogadores no mesmo teclado"). Ela nunca lê atalho nenhum do estado:
-  recebe a mesma informação que o HUD mostra (posição, vida, vento) e
-  devolve uma decisão (ângulo, força, arma) via busca em duas fases —
-  varredura grossa + refinamento local — sobre a física de verdade do jogo
-  (`avancar`, de `ballistics.js`). Como a busca já simula contra o terreno,
-  uma colina bloqueando a linha reta reprova sozinha as armas que bateriam
-  nela; não há regra escrita à mão de "se bloqueado, use o morteiro". A
-  dificuldade soma um erro angular *depois* da busca, não piora a busca.
-- **`estado.ia` em `match.js`** (`iniciarTurnoDaIA`/`atualizarIA`) — o
-  "condutor" que aperta os mesmos `comandos` que um humano apertaria
-  (virar, mirar aos poucos, carregar, disparar quando a carga bate no alvo),
-  turno a turno. Nunca dispara nada por fora do fluxo normal.
-- **A barra de controles de toque** (`#battle-controls`) — o Minhocas
-  original só tinha teclado para andar, pular e trocar de arma; no toque só
-  dava para carregar/soltar o tiro (igual ao bug do Arqueiro antes da mira
-  ser refeita). Só aparece com `pointer: coarse` — some sozinha com mouse.
-
-Decisões que não são óbvias:
-
-- **`LARGURA_MAPA_DUELO = 1700` px (85 m)**, não os 3200 px (160 m) do
-  Minhocas original — achado testando de verdade, não no papel: o mapa do
-  Minhocas é pensado para várias equipes que se aproximam ANDANDO ao longo
-  de várias rodadas. Num duelo 1×1, `escolherNascimentos` (que maximiza a
-  distância entre nascimentos de propósito) colocava os dois lados a
-  80–150 m um do outro — e a bazuca, a arma de maior alcance do arsenal, não
-  passa de ~64 m na força máxima. Como a IA ainda não anda até o alvo
-  (abaixo), ela atirava para o vazio a partida inteira, sempre. Um fuzz de
-  12 sementes no mapa largo deu **0/12 acertos** da IA em dificuldade
-  difícil (erro de mira quase zero); encolhendo o mapa, **10/12**. É
-  exatamente o tipo de bug que só aparece jogando, não lendo o código — daí
-  `tests/ia-integracao.test.js` existir: ele roda `match.js` de ponta a
-  ponta (mapa gerado de verdade, não terreno sintético) e teria pego isso.
-- **A IA não anda até o alvo.** É a limitação mais visível desta primeira
-  versão — decidir para onde andar, num terreno que muda a cada tiro, é um
-  problema por si só. O mapa estreito acima é o que torna essa limitação
-  jogável em vez de quebrada.
-- **`atualizarIA` é chamado de dentro de `update(dt)`**, incondicionalmente
-  a cada quadro, e ele mesmo decide se há algo a fazer (`estado.ia` só existe
-  no turno de um time com `ia` configurada). `main.js` só evita que o
-  **humano** controle o soldado errado (`emTurnoHumano()` antes de ler
-  teclado/toque) — a IA nunca precisa dessa guarda porque só age quando é
-  literalmente a vez dela.
-- **`RESERVA_CONTROLES = 190` em `hud.js`** — a barra de controles de toque
-  fica por cima do canvas; sem essa reserva de espaço, os blocos de
-  vento/arma e o rodapé de dicas (que na tela estreita descem para o
-  rodapé, decisão herdada do Minhocas) ficavam ilegíveis atrás dos botões.
-- Assim como no Arqueiro, `#pause-button` precisou descer (`top: 96px` em
-  `linha-de-frente/css/style.css`) para não brigar com a caixa do relógio,
-  que aqui ocupa o canto superior direito.
-
 ## Fluxo de trabalho
 
 - Desenvolva numa branch `claude/...`, abra PR, espere o CI (`node --test`)
@@ -244,22 +144,15 @@ Não há pendência aberta no momento; a próxima sessão deve tratar isto como
 "jogo publicado e funcionando" e só reabrir a suspeita de link antigo/cache
 se o usuário disser que o jogo não responde.
 
-**Linha de Frente, adicionado em 2026-09-08** (mesma sessão): artilharia
-militar por turnos, 1×1 contra a IA (extensível a 2×2/3×3 via "soldados por
-unidade"), terreno destrutível de verdade (máscara de bits, port do
-Minhocas), 9 armas, água e morte súbita, dificuldade da IA selecionável.
-Verificado de ponta a ponta com toque real (Pixel 5, CDP): andar, pular,
-mirar, trocar de arma e atirar pelos botões em tela; um turno completo da
-IA (pensa → mira → carrega → dispara) observado ao vivo; tela de vitória
-correta; os dois links do saguão (Arqueiro ↔ Linha de Frente) navegando nos
-dois sentidos. 132 testes (`node --test`) passando, incluindo um teste de
-integração que roda a partida inteira (não só a IA em terreno sintético) —
-foi ele (bem, a versão manual dele, rodada antes de virar teste) que achou o
-bug do mapa largo descrito acima.
-
-**Pendência real, não de escopo:** a IA não anda até o alvo — só mira e
-atira de onde nasce. Funciona bem no mapa estreito atual (85 m, dentro do
-alcance do arsenal), mas é a limitação mais visível do jogo. Também ficaram
-de fora, por corte deliberado de escopo (não são bug): o restante do
-arsenal do Minhocas (corda ninja, jetpack, teleporte, ovelha, escopeta,
-ataque aéreo, caixas de paraquedas) e replays.
+**Um segundo jogo (Linha de Frente) foi tentado e removido em 2026-09-09.**
+Era um port do jogo Minhocas (artilharia por turnos, terreno destrutível,
+IA própria) para `/linha-de-frente/`, com link no menu do Arqueiro. O
+usuário jogou o Worms de verdade, achou que era "uma cópia mal feita dele"
+com bugs (times sem cores distintas o bastante, força do tiro difícil de
+controlar, tiros acertando o próprio jogador — provavelmente o soldado
+nascendo com a direção sempre voltada para a direita, `direcao: 1` fixo em
+`createSoldado`, sem virar automaticamente para o lado do inimigo), e pediu
+para não manter dois jogos pela metade — só o Arqueiro, funcionando bem.
+**Não tente reintroduzir isso** a menos que o usuário peça de novo
+explicitamente; se pedir, o código-fonte original (motor completo e
+testado) continua disponível no repositório `Claude`, em `js/minhocas/`.
