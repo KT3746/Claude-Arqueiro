@@ -1,7 +1,7 @@
 {
   "name": "arqueiro",
   "version": "1.0.0",
-  "description": "Jogo de arco e flecha em HTML5 Canvas — sem build, sem dependências.",
+  "description": "Arqueiro e Linha de Frente — jogos em HTML5 Canvas, sem build, sem dependências.",
   "type": "module",
   "private": true,
   "scripts": {
